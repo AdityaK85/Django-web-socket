@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <H1 id="h1" >WebSocket</H1>
+    <p>Restrict In: </p> <h3 id="h3" ></H3>
+
+        <textarea name="" id="chat-log" cols="100" rows="20"></textarea>
+        <input type="text" id="chat-msg-input" size="100">
+        <input type="button" value="Send" id="send_msg_btn">
+
+    <script>
+
+        var group_name = prompt("Enter Group Name for join")
+        console.log(group_name)
+
+        var input_chat = document.getElementById('chat-msg-input')
+        input_chat.addEventListener('keyup', function(event) {
+            if (event.keyCode === 13) {
+                event.preventDefault();
+                document.getElementById('send_msg_btn').click();
+                input_chat.value = "";
+            }
+        })
+
+        var ws = new WebSocket('ws://127.0.0.1:8000/ws/ac/')
+
+        ws.addEventListener('open',()=> {
+            ws.send("Sending request...")
+        })
+
+
+        var send_msg_btn = document.getElementById('send_msg_btn')
+        send_msg_btn.addEventListener('click',()=> {
+            const message = document.getElementById('chat-msg-input').value
+            ws.send(JSON.stringify({
+                'msg' : message
+            }))
+            message.value = ""
+        })
+        
+
+        ws.addEventListener('message',(event)=> {
+            console.log("msg get from back-end", event)
+            document.getElementById('h1').innerHTML= "Data recived from server"
+            document.getElementById('chat-log').value += ( JSON.parse(event.data).msg + '\n ' )
+
+        })
+
+
+        ws.addEventListener('close',(event)=> {
+            console.log("Client was exists", event)
+        })
+
+
+        ws.addEventListener('error',(event)=> {
+            console.log('Error occured', event)
+        })
+
+    </script>
+</body>
+</html>
