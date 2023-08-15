@@ -9,14 +9,24 @@
     <H1 id="h1" >WebSocket</H1>
     <p>Restrict In: </p> <h3 id="h3" ></H3>
 
-        <textarea name="" id="chat-log" cols="100" rows="20"></textarea>
+        <textarea name="" id="chat-log" cols="100" rows="20">
+
+            {% for chat in chats %}
+
+            {{ chat.content }}
+
+            {% endfor %}
+
+        </textarea>
         <input type="text" id="chat-msg-input" size="100">
         <input type="button" value="Send" id="send_msg_btn">
 
+        {{group_name|json_script:"group_name"}}
+
     <script>
 
-        var group_name = prompt("Enter Group Name for join")
-        console.log(group_name)
+        // var group_name = prompt("Enter Group Name for join")
+        // console.log(group_name)
 
         var input_chat = document.getElementById('chat-msg-input')
         input_chat.addEventListener('keyup', function(event) {
@@ -27,10 +37,22 @@
             }
         })
 
-        var ws = new WebSocket('ws://127.0.0.1:8000/ws/ac/')
+
+        const group_name = JSON.parse(document.getElementById('group_name').textContent)
+        console.log(group_name)
+        // var ws = new WebSocket('ws://127.0.0.1:8000/ws/ac/')
+
+        var ws = new WebSocket(
+            'ws://'
+            + window.location.host
+            + '/ws/ac/'
+            + group_name
+            + '/'
+        )
+
 
         ws.addEventListener('open',()=> {
-            ws.send("Sending request...")
+            console.log('Connection established')
         })
 
 
@@ -38,7 +60,7 @@
         send_msg_btn.addEventListener('click',()=> {
             const message = document.getElementById('chat-msg-input').value
             ws.send(JSON.stringify({
-                'msg' : message
+                'msg' :  message
             }))
             message.value = ""
         })
@@ -46,13 +68,14 @@
 
         ws.addEventListener('message',(event)=> {
             console.log("msg get from back-end", event)
+            const data = JSON.parse(event.data)
             document.getElementById('h1').innerHTML= "Data recived from server"
-            document.getElementById('chat-log').value += ( JSON.parse(event.data).msg + '\n ' )
-
+            document.getElementById('chat-log').value += (data.msg + '\n')
+            
         })
 
 
-        ws.addEventListener('close',(event)=> {
+        ws.addEventListener('onclose',(event)=> {
             console.log("Client was exists", event)
         })
 
