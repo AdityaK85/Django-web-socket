@@ -11,10 +11,12 @@ from channels.db import database_sync_to_async
 # SyncConsumer
 class MySyncConsumer_Connect(SyncConsumer):
     def websocket_connect(self , event):
+        print("Websocket Sync Connected....", event)
         # print('channal layers ', self.channel_layer)
         # print('channal name ', self.channel_name)
 
         self.group_name =  self.scope['url_route']['kwargs']['group_name']
+        # print(self.scope['user'])
         # add new member in group
         async_to_sync(self.channel_layer.group_add)
         (self.group_name, self.channel_name)
@@ -22,25 +24,32 @@ class MySyncConsumer_Connect(SyncConsumer):
         self.send({
             'type':'websocket.accept'
         })
-        print("Websocket Connected....", event)
         
 
-def websocket_receive(self, event):
-    print("Websocket Received....", event['text'])
-    print("Websocket Received....", type(event['text']))
+    def websocket_receive(self, event):
+        # print("Websocket Received....", event['text'])
+        # print("Websocket Received....", type(event['text']))
+        
+        data = json.loads(event['text'])
+        group = GroupMaster.objects.get(name = self.group_name)
+        data['user'] = self.scope['user'].username
 
-    data = type(json.loads(event['text']))
-    # print("..........json", data)
-    group = GroupMaster.objects.get(name = self.group_name)
-    ChatMaster.objects.create(content=data['msg'], group=group)
+        if self.scope['user'].is_authenticated:
+            print('..........data',json.dumps(data))
 
-    async_to_sync(self.channel_layer.group_send)(
-        self.group_name,
-        {
-            'type': 'chat.message',
-            'message': event['text'],
-        }
-    )
+            ChatMaster.objects.create(content=data['msg'], group=group)
+            async_to_sync(self.channel_layer.group_send)(
+                self.group_name,
+                {
+                    'type': 'chat.message',
+                    'message':json.dumps(data)
+                }
+            )
+        else :
+            self.send({
+                'type':'websocket.send',
+                'text': json.dumps({"msg":"Please login first", "user":"Unknown"})
+            })
 
     def chat_message(self, event):
         print('EVENT--> ', event['message'])
@@ -51,13 +60,13 @@ def websocket_receive(self, event):
 
     def websocket_disconnect(self , event):
         print("Websocket Disconnected....", event)
-        StopConsumer()
+        # StopConsumer()
 
 
 # AsynConsumer
 class AsycConsumer_Connect(AsyncConsumer):
     async def websocket_connect(self , event):
-        print("Websocket Connected....", event)
+        print("Websocket Asyc Connected....", event)
         self.group_name =  self.scope['url_route']['kwargs']['group_name']
         await self.channel_layer.group_add( self.group_name , self.channel_name )
         await self.send({
@@ -65,31 +74,40 @@ class AsycConsumer_Connect(AsyncConsumer):
             })
 
     async def websocket_receive(self , event):
-        print("Websocket Recived....", event['text'])
-        print("Websocket Recived type....", type(event['text']))
+        # print("Websocket Recived....", event['text'])
+        # print("Websocket Recived type....", type(event['text']))
         data = json.loads(event['text'])
         # print('................jsone',type(data))
         # print('................jsone',data)
         group = await database_sync_to_async(GroupMaster.objects.get)(name = self.group_name)
-        await database_sync_to_async(ChatMaster.objects.create)(content=data['msg'], group=group)
-        
-        await self.channel_layer.group_send(
-            self.group_name,
-            {
-                'type':'chat.message',
-                'message':event['text'],
-            }
-        )
+        data['user'] = self.scope['user'].username
+        if self.scope['user'].is_authenticated:
+
+            print('..........data',json.dumps(data))
+
+            await database_sync_to_async(ChatMaster.objects.create)(content=data['msg'], group=group)
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    'type':'chat.message',
+                    'message':json.dumps(data),
+                }
+            )
+        else:
+            await self.send({
+                'type':'websocket.send',
+                'text': json.dumps({"msg":"Please login first  "})
+            })
 
     async def chat_message(self, event):
-        print('EVENT--> ', event['message'])
+        # print('EVENT--> ', event['message'])
         await self.send({
             'type':'websocket.send',
             'text': event['message']
         })
 
     async def websocket_disconnect(self , event):
-        print("Websocket Disconnected....", event)
+        # print("Websocket Disconnected....", event)
 
         # Remove Group & Discard  
         await self.channel_layer.group_discard (

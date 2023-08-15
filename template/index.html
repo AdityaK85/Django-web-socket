@@ -45,14 +45,17 @@
         var ws = new WebSocket(
             'ws://'
             + window.location.host
-            + '/ws/ac/'
+            + '/ws/sc/'
             + group_name
             + '/'
         )
 
 
-        ws.addEventListener('open',()=> {
-            console.log('Connection established')
+        ws.addEventListener('open',(event)=> {
+            console.log('Connection established', event)
+            ws.send(JSON.stringify({
+                'msg' :  "Connection established"
+            }))
         })
 
 
@@ -68,9 +71,12 @@
 
         ws.addEventListener('message',(event)=> {
             console.log("msg get from back-end", event)
+            console.log('..........event',event)
+            console.log('..........event',event.data)
+            console.log('..........event',event.user)
             const data = JSON.parse(event.data)
             document.getElementById('h1').innerHTML= "Data recived from server"
-            document.getElementById('chat-log').value += (data.msg + '\n')
+            document.getElementById('chat-log').value += ( data.user + ": " + data.msg + '\n')
             
         })
 
