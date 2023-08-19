@@ -6,7 +6,9 @@
     <title>Document</title>
 </head>
 <body>
-    <H1 id="h1" >WebSocket</H1>
+    <H1 id="h1" >WebSocket counter</H1>
+    <h4 id="count" ></h4>
+    <h2>{{group_name}}</h2>
     <p>Restrict In: </p> <h3 id="h3" ></H3>
 
         <textarea name="" id="chat-log" cols="100" rows="20">
@@ -33,6 +35,7 @@
             if (event.keyCode === 13) {
                 event.preventDefault();
                 document.getElementById('send_msg_btn').click();
+                console.log(input_chat)
                 input_chat.value = "";
             }
         })
@@ -40,12 +43,15 @@
 
         const group_name = JSON.parse(document.getElementById('group_name').textContent)
         console.log(group_name)
-        // var ws = new WebSocket('ws://127.0.0.1:8000/ws/ac/')
+        // var ws = new WebSocket('ws://127.0.0.1:8000/ws/gjac/')  // Show Counts user this 
 
+
+
+        // This is for chat applications
         var ws = new WebSocket(
             'ws://'
             + window.location.host
-            + '/ws/sc/'
+            + '/ws/gjsc/'
             + group_name
             + '/'
         )
@@ -62,23 +68,40 @@
         var send_msg_btn = document.getElementById('send_msg_btn')
         send_msg_btn.addEventListener('click',()=> {
             const message = document.getElementById('chat-msg-input').value
+            console.log(message)
             ws.send(JSON.stringify({
                 'msg' :  message
             }))
-            message.value = ""
+            // message.value = ""
         })
         
+        
+        // Genric Consumer
+        // ws.addEventListener('message',(event)=> {
+        //     console.log("msg get from back-end", event)
+        //     console.log('..........event',event)
+        //     console.log('..........event',event.data)
+        //     console.log('..........event',event.user)
+        //     const data = JSON.parse(event.data)
+        //     document.getElementById('h1').innerHTML= "Data recived from server"
+        //     document.getElementById('chat-log').value += ( data.user + ": " + data.msg + '\n')
+            
+        // })
 
+
+        // Genric Json Consumer
         ws.addEventListener('message',(event)=> {
             console.log("msg get from back-end", event)
             console.log('..........event',event)
             console.log('..........event',event.data)
             console.log('..........event',event.user)
             const data = JSON.parse(event.data)
-            document.getElementById('h1').innerHTML= "Data recived from server"
-            document.getElementById('chat-log').value += ( data.user + ": " + data.msg + '\n')
+            // document.getElementById('count').innerHTML= data.msg
+            document.getElementById('h1').innerHTML= data['msg']
+            document.getElementById('chat-log').value += ( data.msg['user'] + ": " + data.msg['msg'] + '\n')
             
         })
+
 
 
         ws.addEventListener('onclose',(event)=> {
