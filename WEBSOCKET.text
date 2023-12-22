@@ -1,6 +1,26 @@
 ****************Register django-channels
 
-1 . pip install channels
+1 . pip install channels==3.0.5
+
+ A) Local server do not need redis for websocket
+ Local server channels config : 
+         CHANNEL_LAYERS = {
+            'default': {
+                "BACKEND": "channels.layers.InMemoryChannelLayer",
+            }
+        }
+        
+B) Production server channels config : 
+    CHANNEL_LAYERS = {
+    	"default": {
+    		"BACKEND": "channels_redis.core.RedisChannelLayer",
+    		"CONFIG": {
+                "hosts": [("localhost", 6379)],
+                "capacity": 5000,
+                "expiry": 5,
+    		},
+    	},
+    }
 
 
 2.  Register channels in settings.py file 
