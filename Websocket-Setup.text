@@ -1,0 +1,137 @@
+****************Register django-channels
+
+1 . pip install channels==3.0.5
+
+ A) Local server do not need redis for websocket
+ Local server channels config : 
+         CHANNEL_LAYERS = {
+            'default': {
+                "BACKEND": "channels.layers.InMemoryChannelLayer",
+            }
+        }
+        
+B) Production server channels config : 
+    CHANNEL_LAYERS = {
+    	"default": {
+    		"BACKEND": "channels_redis.core.RedisChannelLayer",
+    		"CONFIG": {
+                "hosts": [("localhost", 6379)],
+                "capacity": 5000,
+                "expiry": 5,
+    		},
+    	},
+    }
+
+
+2.  Register channels in settings.py file 
+    Code : 
+
+        INSTALLED_APPS = [
+            'channels',
+            'django.contrib.admin',
+            'websocket_app'
+            ...
+        ]
+
+3. write asgi in settings.py
+
+    Code : 
+    WSGI_APPLICATION = 'python_websocket.wsgi.application'
+    ASGI_APPLICATION = 'python_websocket.asgi.application'
+
+
+4. Go ASGI.py 
+    1. Register url in ASGI.py   
+    Cdde : 
+        Without any authentication
+        from channels.routing import ProtocolTypeRouter
+            application = ProtocolTypeRouter({
+            'http':get_asgi_application(),
+            # websocket register pending
+        })
+
+    2.  Add Authetications in channal Layers
+      code : 
+          from channels.auth import AuthMiddlewareStack
+  
+          application = ProtocolTypeRouter({
+              'http':get_asgi_application(),
+              'websocket': AuthMiddlewareStack (
+                  URLRouter(
+                      websocket_app.routing.ws_urlpatterns
+                  )
+              )
+          })
+
+      3. Recomended 
+       Code
+           import os
+           from django.core.asgi import get_asgi_application
+           from channels.auth import AuthMiddlewareStack
+           from channels.routing import ProtocolTypeRouter, URLRouter
+           from channels.security.websocket import AllowedHostsOriginValidator, OriginValidator
+           from Websocket_Utility.routing import ws_urlpatterns
+           
+           os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'RMS.settings')
+           print('::: ASGI SERVER STARTED :::')
+           application = get_asgi_application()
+           application = ProtocolTypeRouter({
+           	"http": application,
+               "websocket": OriginValidator(AuthMiddlewareStack(URLRouter(ws_urlpatterns)), ['*']),
+           })
+
+
+****************Consumers
+
+Create Consumers.py file in app
+Make __init__.py file as a contructor
+
+    1. Recomded 
+    Code : 
+         import json
+         from channels.generic.websocket import AsyncJsonWebsocketConsumer
+         
+         class LiveConsumer(AsyncJsonWebsocketConsumer):
+         	async def connect(self):
+         		self.room_group_name = 'Test_Consumer'
+         		self.error_code = 4011
+         		await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+         		await self.accept()
+         
+         		await self.send_json({'connection' : json.dumps({"msg" : "...CONNECTED..."})})
+         
+         		# self.exp_date = self.scope['url_route']['kwargs']['exp_date']
+         	async def disconnect(self, code):
+         		await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+         		await self.close(self.error_code)
+         		
+         
+         	async def send_live_data(self, event):
+         		data = event.get('value')
+         		try:
+         			await self.send_json(data)
+         		except Exception as e:
+         			await self.disconnect({'code': self.error_code})
+         			await self.close(self.error_code)
+
+
+****************Rounting
+
+Create Rounting.py file in app
+    mention urls in ASGI file
+     Code : 
+          from django.urls import path
+          from .consumers import * 
+          
+          
+          ws_urlpatterns = [
+              path('ws/live_socket/',LiveConsumer.as_asgi()),
+          ]
+
+**********************Using Channal layers and for Linux use Channal Reddis
+
+5. download Memoria server software from crome ( Do if websocket not connect show redis server error )
+
+6. This Channal layer help to make a chat application . They show realtime data with other browers with same data
+
+7. Mostly Use Consumer is Genric consumer & Json Genric consumer
